@@ -8,6 +8,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"unicode"
 
 	"github.com/lpernett/godotenv"
@@ -70,45 +71,19 @@ func main() {
 		}
 	}
 
+	// I am going to try waitgroups for concurrency
+	var wg sync.WaitGroup
 	for key, link := range links {
 		var w Workshop
-		matched := false
 
-		for _, re := range patterns {
-			m := re.FindStringSubmatch(key)
-			if len(m) == 0 {
-				continue
-			}
+		// I LOVE GO 1.25 YAYAY <3
+		wg.Go(func() {
+			parseLink(w, &table, patterns, key, link)
+		})
 
-			switch {
-			case re == patterns[0]: // team/workshop-sem
-				w = Workshop{Name: m[2], Team: m[1], Semester: normalizeSemester(m[3]), Link: link}
-			case re == patterns[1]: // team/sem-workshop
-				w = Workshop{Name: (m[3]), Team: m[1], Semester: normalizeSemester(m[2]), Link: link}
-			case re == patterns[2]: // team-workshop-sem
-				w = Workshop{Name: (m[2]), Team: m[1], Semester: normalizeSemester(m[3]), Link: link}
-			case re == patterns[3]: // team-sem-workshop
-				w = Workshop{Name: (m[3]), Team: m[1], Semester: normalizeSemester(m[2]), Link: link}
-			case re == patterns[4]: // sem-team-workshop
-				w = Workshop{Name: (m[3]), Team: m[2], Semester: normalizeSemester(m[1]), Link: link}
-			}
-
-			if isValidTeam(w.Team) && isValidSemester(w.Semester) {
-				err := nameManager(&w)
-				if err != nil {
-					continue
-				}
-				table[w.Team][w.Semester] = append(table[w.Team][w.Semester], w)
-			}
-			matched = true
-			break
-		}
-
-		if !matched {
-			fmt.Fprintf(os.Stderr, "WARN: Could not parse key: %s\n", key)
-		}
 	}
 
+	wg.Wait()
 	// Output in TypeScript format
 	fmt.Println("export var currentTable: Tables = {")
 	for _, team := range teams {
@@ -124,6 +99,44 @@ func main() {
 		fmt.Printf("\t\t}\n\t}%s\n", comma(indexOf(team, teams), len(teams)))
 	}
 	fmt.Println("}")
+}
+
+func parseLink(w Workshop, table *WorkshopTable, patterns []*regexp.Regexp, key, link string) {
+	matched := false
+
+	for _, re := range patterns {
+		m := re.FindStringSubmatch(key)
+		if len(m) == 0 {
+			continue
+		}
+
+		switch {
+		case re == patterns[0]: // team/workshop-sem
+			w = Workshop{Name: m[2], Team: m[1], Semester: normalizeSemester(m[3]), Link: link}
+		case re == patterns[1]: // team/sem-workshop
+			w = Workshop{Name: (m[3]), Team: m[1], Semester: normalizeSemester(m[2]), Link: link}
+		case re == patterns[2]: // team-workshop-sem
+			w = Workshop{Name: (m[2]), Team: m[1], Semester: normalizeSemester(m[3]), Link: link}
+		case re == patterns[3]: // team-sem-workshop
+			w = Workshop{Name: (m[3]), Team: m[1], Semester: normalizeSemester(m[2]), Link: link}
+		case re == patterns[4]: // sem-team-workshop
+			w = Workshop{Name: (m[3]), Team: m[2], Semester: normalizeSemester(m[1]), Link: link}
+		}
+
+		if isValidTeam(w.Team) && isValidSemester(w.Semester) {
+			err := nameManager(&w)
+			if err != nil {
+				continue
+			}
+			(*table)[w.Team][w.Semester] = append((*table)[w.Team][w.Semester], w)
+		}
+		matched = true
+		break
+	}
+
+	if !matched {
+		fmt.Fprintf(os.Stderr, "WARN: Could not parse key: %s\n", key)
+	}
 }
 
 func normalizeSemester(s string) string {
