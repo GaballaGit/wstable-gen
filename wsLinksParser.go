@@ -14,6 +14,8 @@ import (
 	"github.com/lpernett/godotenv"
 )
 
+var mu sync.Mutex
+
 type Workshop struct {
 	Name     string
 	Team     string
@@ -128,7 +130,9 @@ func parseLink(w Workshop, table *WorkshopTable, patterns []*regexp.Regexp, key,
 			if err != nil {
 				continue
 			}
+			mu.Lock()
 			(*table)[w.Team][w.Semester] = append((*table)[w.Team][w.Semester], w)
+			mu.Unlock()
 		}
 		matched = true
 		break
