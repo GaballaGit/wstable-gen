@@ -87,7 +87,7 @@ func main() {
 
 	wg.Wait()
 	// Output in TypeScript format
-	fmt.Println("export var currentTable: Tables = {")
+	fmt.Println("export const currentTable: Tables = {")
 	for _, team := range teams {
 		fmt.Printf("\t%s: {\n\t\tworkshops: {\n", team)
 		for i, sem := range semesters {
