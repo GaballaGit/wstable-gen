@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -128,6 +129,7 @@ func parseLink(w Workshop, table *WorkshopTable, patterns []*regexp.Regexp, key,
 		if isValidTeam(w.Team) && isValidSemester(w.Semester) {
 			err := nameManager(&w)
 			if err != nil {
+				fmt.Println(err)
 				continue
 			}
 			mu.Lock()
@@ -192,6 +194,18 @@ func indexOf[T comparable](x T, list []T) int {
 }
 
 func nameManager(w *Workshop) error {
+	// I used url here so that I can parse specific sections of the url to check
+	// non workshops faster, with the full link it takes like one gajillion years to run
+
+	u, err := url.Parse(w.Link)
+	if err != nil {
+		return fmt.Errorf("invalid url: %s", err)
+	}
+
+	if strings.Contains(u.Path, "forms") || strings.Contains(u.Host, "codepen") || strings.Contains(u.Host, "colab") {
+		return fmt.Errorf("not a workshop")
+	}
+
 	if !strings.Contains(w.Link, "docs.google.com/presentation") {
 		w.Name = nameNoLink(w.Name)
 		return nil
@@ -199,32 +213,35 @@ func nameManager(w *Workshop) error {
 
 	resp, err := http.Get(w.Link)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("error (bc im lazy): %s", err)
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status %d from %s", resp.StatusCode, w.Link)
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("unable to read body: %s", err)
 	}
 
 	re := regexp.MustCompile(`(?i)<title>(.*?)</title>`)
 	matches := re.FindStringSubmatch(string(body))
 	if len(matches) < 2 {
-		fmt.Errorf("no title found")
-		return nil
+		return fmt.Errorf("no title found")
 	}
 
 	title := strings.TrimSpace(matches[1])
 	title = cleanGoogleTitle(title)
 
-	if strings.Contains(title, "Sign in") {
-		fmt.Errorf("link not publicly accessible")
-		return nil
-	}
-
-	if strings.Contains(title, "Page Not Found") {
+	switch {
+	case strings.Contains(title, "Sign in"):
+		return fmt.Errorf("link not publicly accessible")
+	case strings.Contains(title, "Page Not Found"):
 		return fmt.Errorf("Workshop unavaliable")
+	case strings.Contains(title, "Access Denied"):
+		return fmt.Errorf("Public access is denied")
 	}
 
 	w.Name = title
