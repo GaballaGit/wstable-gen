@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
+
+	"github.com/lpernett/godotenv"
 )
 
 type Workshop struct {
@@ -34,8 +36,14 @@ var (
 )
 
 func main() {
-	// Read links.json
-	data, err := os.ReadFile("links.json")
+	// Getting da file path
+
+	godotenv.Load()
+
+	bp := os.Getenv("ABS_PATH")
+	fp := bp + "/src/lib/public/links/links.json"
+
+	data, err := os.ReadFile(fp)
 	if err != nil {
 		panic(err)
 	}
