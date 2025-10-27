@@ -131,8 +131,7 @@ export interface WorkshopInfo {
 	team: string;
 	semester: string;
 	link: string;
-}
-`)
+}`)
 	tablesFile.Sync()
 	// Output in TypeScript format
 	fmt.Fprintln(tablesFile, "export const currentTable: Tables = {")
