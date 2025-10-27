@@ -44,7 +44,7 @@ func main() {
 
 	godotenv.Load()
 
-	bp := os.Getenv("ABS_PATH")
+	bp := os.Getenv("ABS_PATH") // waow
 	fp := bp + "/src/lib/public/links/links.json"
 
 	data, err := os.ReadFile(fp)
@@ -87,21 +87,73 @@ func main() {
 	}
 
 	wg.Wait()
+
+	// table file path
+	tfp := bp + "/src/lib/components/workshop/"
+	tablesFile, err := os.Create(tfp + "table.ts")
+	if err != nil {
+		panic(err)
+	}
+	defer tablesFile.Close()
+
+	fmt.Fprintln(tablesFile, `export type semesters = 'fa24' | 'sp25' | 'fa25';
+export type teams =
+	| 'ai'
+	| 'algo'
+	| 'design'
+	| 'dev'
+	| 'gamedev'
+	| 'general'
+	| 'icpc'
+	| 'nodebuds'
+	| 'oss';
+
+// Semester shortcut, in the case of f25 -> fa25
+const sSc = new Map<string, string>();
+sSc.set('f24', 'fa24');
+sSc.set('s25', 'sp25');
+sSc.set('f25', 'fa25');
+sSc.set('s26', 'sp26');
+
+// --------------------- Workshop table ---------------------
+type Tables = {
+	[team in teams]: {
+		workshops: Workshops;
+	};
+};
+
+type Workshops = {
+	[sem in semesters]: WorkshopInfo[];
+};
+
+export interface WorkshopInfo {
+	name: string;
+	team: string;
+	semester: string;
+	link: string;
+}
+`)
+	tablesFile.Sync()
 	// Output in TypeScript format
-	fmt.Println("export const currentTable: Tables = {")
+	fmt.Fprintln(tablesFile, "export const currentTable: Tables = {")
 	for _, team := range teams {
-		fmt.Printf("\t%s: {\n\t\tworkshops: {\n", team)
+		fmt.Fprintf(tablesFile, "\t%s: {\n\t\tworkshops: {\n", team)
 		for i, sem := range semesters {
-			fmt.Printf("\t\t\t%s: [\n", sem)
+			fmt.Fprintf(tablesFile, "\t\t\t%s: [\n", sem)
 			for _, w := range table[team][sem] {
-				fmt.Printf("\t\t\t\t{ name: \"%s\", team: \"%s\", semester: \"%s\", link: \"%s\" },\n",
+				fmt.Fprintf(tablesFile, "\t\t\t\t{ name: \"%s\", team: \"%s\", semester: \"%s\", link: \"%s\" },\n",
 					escape(w.Name), w.Team, w.Semester, w.Link)
 			}
-			fmt.Printf("\t\t\t]%s\n", comma(i, len(semesters)))
+			fmt.Fprintf(tablesFile, "\t\t\t]%s\n", comma(i, len(semesters)))
 		}
-		fmt.Printf("\t\t}\n\t}%s\n", comma(indexOf(team, teams), len(teams)))
+		fmt.Fprintf(tablesFile, "\t\t}\n\t}%s\n", comma(indexOf(team, teams), len(teams)))
 	}
-	fmt.Println("}")
+	fmt.Fprintln(tablesFile, "}")
+	tablesFile.Sync()
+
+	fmt.Fprintln(tablesFile, `export async function NewWorkshopTable() {
+	return currentTable;
+}`)
 }
 
 func parseLink(w Workshop, table *WorkshopTable, patterns []*regexp.Regexp, key, link string) {
