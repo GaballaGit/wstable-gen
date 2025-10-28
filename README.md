@@ -13,4 +13,4 @@ This is a script to update acmcsuf's workshops page tables.
 - This will write to the tables file that workshops in your acmcsuf.com repo uses.
 
 ---
-### Note: You will still need to run npm run all since this does not pass the fmt check
+### Note: You will still need to run npm run all in the acmcsuf repo since this does not pass the fmt check
