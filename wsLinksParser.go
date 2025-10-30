@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"unicode"
@@ -39,6 +40,11 @@ var (
 	teams     = []string{"ai", "algo", "design", "dev", "gamedev", "general", "icpc", "nodebuds", "oss"}
 )
 
+type wsOrder struct {
+	wsKey []string
+	wsVal map[string]Workshop
+}
+
 func main() {
 	// Getting da file path
 
@@ -67,6 +73,9 @@ func main() {
 	}
 
 	table := make(WorkshopTable)
+	var wsO wsOrder
+	wsO.wsVal = make(map[string]Workshop)
+
 	for _, t := range teams {
 		table[t] = make(map[string][]Workshop)
 		for _, sem := range semesters {
@@ -81,13 +90,18 @@ func main() {
 
 		// I LOVE GO 1.25 YAYAY <3
 		wg.Go(func() {
-			parseLink(w, &table, patterns, key, link)
+			parseLink(w, &wsO, patterns, key, link)
 		})
 
 	}
 
 	wg.Wait()
 
+	sort.Strings(wsO.wsKey)
+	for _, elm := range wsO.wsKey {
+		w := wsO.wsVal[elm]
+		table[w.Team][w.Semester] = append(table[w.Team][w.Semester], w)
+	}
 	// table file path
 	tfp := bp + "/src/lib/components/workshop/"
 	tablesFile, err := os.Create(tfp + "table.ts")
@@ -153,9 +167,10 @@ export interface WorkshopInfo {
 	fmt.Fprintln(tablesFile, `export async function NewWorkshopTable() {
 	return currentTable;
 }`)
+	tablesFile.Sync()
 }
 
-func parseLink(w Workshop, table *WorkshopTable, patterns []*regexp.Regexp, key, link string) {
+func parseLink(w Workshop, wsO *wsOrder, patterns []*regexp.Regexp, key, link string) {
 	matched := false
 
 	for _, re := range patterns {
@@ -184,7 +199,10 @@ func parseLink(w Workshop, table *WorkshopTable, patterns []*regexp.Regexp, key,
 				continue
 			}
 			mu.Lock()
-			(*table)[w.Team][w.Semester] = append((*table)[w.Team][w.Semester], w)
+			kp := w.Name + w.Team
+			(*wsO).wsKey = append((*wsO).wsKey, kp)
+			(*&wsO.wsVal)[kp] = w
+			//(*table)[w.Team][w.Semester] = append((*table)[w.Team][w.Semester], w)
 			mu.Unlock()
 		}
 		matched = true
