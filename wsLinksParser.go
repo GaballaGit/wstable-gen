@@ -97,11 +97,14 @@ func main() {
 
 	wg.Wait()
 
+	fmt.Println("---------------------------------")
 	sort.Strings(wsO.wsKey)
 	for _, elm := range wsO.wsKey {
+		fmt.Println(elm)
 		w := wsO.wsVal[elm]
 		table[w.Team][w.Semester] = append(table[w.Team][w.Semester], w)
 	}
+
 	// table file path
 	tfp := bp + "/src/lib/components/workshop/"
 	tablesFile, err := os.Create(tfp + "table.ts")
@@ -199,7 +202,7 @@ func parseLink(w Workshop, wsO *wsOrder, patterns []*regexp.Regexp, key, link st
 				continue
 			}
 			mu.Lock()
-			kp := w.Name + w.Team
+			kp := w.Name + w.Team + w.Semester
 			(*wsO).wsKey = append((*wsO).wsKey, kp)
 			(*&wsO.wsVal)[kp] = w
 			//(*table)[w.Team][w.Semester] = append((*table)[w.Team][w.Semester], w)
