@@ -274,7 +274,7 @@ func nameManager(w *Workshop) error {
 		return fmt.Errorf("invalid url: %s", err)
 	}
 
-	if strings.Contains(u.Path, "forms") || strings.Contains(u.Host, "codepen") || strings.Contains(u.Host, "colab") || strings.Contains(u.Host, "storage.googleapis") {
+	if strings.Contains(u.Path, "forms") || strings.Contains(u.Host, "codepen") || strings.Contains(u.Host, "colab") || strings.Contains(u.Host, "storage.googleapis") || strings.Contains(u.Host, "github") {
 		return fmt.Errorf("not a workshop")
 	}
 
