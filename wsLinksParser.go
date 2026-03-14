@@ -36,7 +36,7 @@ var semesterShortcuts = map[string]string{
 }
 
 var (
-	semesters = []string{"fa24", "sp25", "fa25"}
+	semesters = []string{"fa24", "sp25", "fa25", "sp26"}
 	teams     = []string{"ai", "algo", "design", "dev", "gamedev", "general", "icpc", "nodebuds", "oss"}
 )
 
